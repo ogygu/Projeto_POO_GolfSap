@@ -9,7 +9,8 @@ public class Carro extends JFrame {
     private Roda roda;
 
     private boolean ligado = false;
-    
+    private int contadorAviso = 0;
+    private boolean avisado = false;
 
     private JLabel lblVelocimetro, lblRPM, lblCombustivel, lblResistenciaAr, lblMarcha;
     private JButton btnAcelerar, btnFrear, btnMarchaMais, btnMarchaMenos, btnLigarDesligar, btnAbastecer;
@@ -31,7 +32,6 @@ public class Carro extends JFrame {
         setLayout(null);
 
         // Componentes da interface
-
         lblVelocimetro = new JLabel("Velocidade: 0 km/h");
         lblVelocimetro.setBounds(50, 50, 200, 30);
         add(lblVelocimetro);
@@ -66,10 +66,10 @@ public class Carro extends JFrame {
                 btnFrear.setEnabled(ligado);
                 btnMarchaMais.setEnabled(ligado);
                 btnMarchaMenos.setEnabled(ligado);
-                btnAbastecer.setEnabled(ligado); // Habilita o botão de abastecer apenas se o carro estiver ligado
+                btnAbastecer.setEnabled(ligado);
 
                 if (!ligado) {
-                    motor.parar(); // Reduz RPM ao desligar
+                    motor.parar();
                 }
 
                 atualizarInterface();
@@ -81,37 +81,37 @@ public class Carro extends JFrame {
         JButton btnCambioAutomatico = new JButton("Ativar Auto");
         btnCambioAutomatico.setBounds(300, 350, 120, 30);
         btnCambioAutomatico.addActionListener(new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            boolean isAuto = caixaMarchas.isCambioAutomatico();
-            caixaMarchas.setCambioAutomatico(!isAuto);
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                boolean isAuto = caixaMarchas.isCambioAutomatico();
+                caixaMarchas.setCambioAutomatico(!isAuto);
 
-            btnCambioAutomatico.setText(caixaMarchas.isCambioAutomatico() ? "Desativar Auto" : "Ativar Auto");
+                btnCambioAutomatico.setText(caixaMarchas.isCambioAutomatico() ? "Desativar Auto" : "Ativar Auto");
 
-            btnMarchaMais.setEnabled(!caixaMarchas.isCambioAutomatico());
-            btnMarchaMenos.setEnabled(!caixaMarchas.isCambioAutomatico());
+                btnMarchaMais.setEnabled(!caixaMarchas.isCambioAutomatico());
+                btnMarchaMenos.setEnabled(!caixaMarchas.isCambioAutomatico());
 
-            atualizarInterface();
-        }
-    });
-    add(btnCambioAutomatico);
+                atualizarInterface();
+            }
+        });
+        add(btnCambioAutomatico);
 
         // Botão de Abastecer
         btnAbastecer = new JButton("Abastecer");
         btnAbastecer.setBounds(300, 300, 100, 30);
-        btnAbastecer.setEnabled(false); // Desabilitado inicialmente
+        btnAbastecer.setEnabled(false);
         btnAbastecer.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (ligado) {
-                    tanque.abastecer(); // Chama o método de abastecer
+                    tanque.abastecer();
                     JOptionPane.showMessageDialog(
                         Carro.this,
                         "O carro foi abastecido! Combustível restaurado para 100%",
                         "Sucesso",
                         JOptionPane.INFORMATION_MESSAGE
                     );
-                    atualizarInterface(); // Atualiza a interface
+                    atualizarInterface();
                 }
             }
         });
@@ -154,6 +154,8 @@ public class Carro extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if (ligado) {
                     caixaMarchas.mudarMarcha(true);
+                    contadorAviso = 0;
+                    avisado = false;
                     atualizarInterface();
                 }
             }
@@ -168,6 +170,8 @@ public class Carro extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if (ligado) {
                     caixaMarchas.mudarMarcha(false);
+                    contadorAviso = 0;
+                    avisado = false;
                     atualizarInterface();
                 }
             }
@@ -175,22 +179,52 @@ public class Carro extends JFrame {
         add(btnMarchaMenos);
 
         setVisible(true);
+        // Timer para verificar periodicamente se precisa trocar de marcha
+        Timer timerVerificarMarcha = new Timer(1000, (e) -> {
+            if (!caixaMarchas.isCambioAutomatico() && ligado) {
+                double velocidade = roda.getVelocidade();
+
+                if (caixaMarchas.needsGearChange(velocidade)) {
+                    contadorAviso++;
+
+                    if (contadorAviso == 3 && !avisado) {
+                        JOptionPane.showMessageDialog(this,
+                                "Você deveria trocar de marcha.",
+                                "Dica",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        avisado = true;
+
+                    } else if (contadorAviso >= 6 && avisado) {
+                        JOptionPane.showMessageDialog(this,
+                                "ATENÇÃO: Troque de marcha imediatamente!",
+                                "Alerta",
+                                JOptionPane.WARNING_MESSAGE);
+                        contadorAviso = 0;
+                        avisado = false;
+                    }
+
+                } else {
+                    // Resetar avisos se a marcha estiver correta
+                    contadorAviso = 0;
+                    avisado = false;
+                }
+            }
+        });
+        timerVerificarMarcha.start();
     }
 
     private void atualizarDinamica() {
         double rpm = motor.getRPM();
-        double marcha = caixaMarchas.getMarchaAtual();
+        int marcha = caixaMarchas.getMarchaAtual();
+        double velocidadeMaximaPorMarcha = caixaMarchas.getVelocidadeMaximaPorMarcha();
 
-        // Calcula velocidade e resistência do ar
-        roda.atualizarVelocidade(rpm, marcha);
+        // Corrigido: agora passa os três parâmetros
+        roda.atualizarVelocidade(rpm, marcha, velocidadeMaximaPorMarcha);
         tanque.consumirCombustivel(rpm / 7000 * 0.5); // Consumo proporcional ao RPM
 
         // Atualiza automaticamente a marcha se for automático
-        caixaMarchas.atualizarMarchaAutomaticamente(roda.getVelocidade());
-
-        // Verifica necessidade de troca de marcha
-        if (!caixaMarchas.isCambioAutomatico() && caixaMarchas.needsGearChange(roda.getVelocidade())) {
-            JOptionPane.showMessageDialog(this, "Troque de marcha!", "Aviso", JOptionPane.INFORMATION_MESSAGE);
+        if (caixaMarchas.isCambioAutomatico()) {
+            caixaMarchas.atualizarMarchaAutomaticamente(roda.getVelocidade());
         }
 
         atualizarInterface();

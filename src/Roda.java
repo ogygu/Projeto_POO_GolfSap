@@ -1,25 +1,31 @@
 public class Roda {
-    private double velocidade;
-    private double resistenciaDoAr;
+    private double velocidade; // km/h
 
     public Roda() {
         this.velocidade = 0;
-        this.resistenciaDoAr = 0;
-    }
-
-    public void atualizarVelocidade(double torque, double marcha) {
-        // Fórmula simplificada para velocidade
-        velocidade = torque / marcha * 0.1; // Exemplo de cálculo
-
-        // Resistência do ar (proporcional à velocidade quadrática)
-        resistenciaDoAr = 0.5 * 1.225 * Math.pow(velocidade, 2) * 2.0; // Área frontal estimada
     }
 
     public double getVelocidade() {
         return velocidade;
     }
 
+    public void setVelocidade(double velocidade) {
+        this.velocidade = Math.max(0, velocidade);
+    }
+
+    // Atualiza a velocidade da roda de acordo com o rpm, marcha e limite da marcha
+    public void atualizarVelocidade(double rpm, int marcha, double velocidadeMaximaPorMarcha) {
+        if (marcha == 0) {
+            this.velocidade = 0;
+        } else {
+            // Simula velocidade proporcional ao rpm, limitada pelo máximo da marcha
+            double novaVelocidade = (rpm / 7000.0) * velocidadeMaximaPorMarcha;
+            this.velocidade = Math.min(novaVelocidade, velocidadeMaximaPorMarcha);
+        }
+    }
+
+    // Calcula a resistência do ar (exemplo: 0.3 * v^2)
     public double getResistenciaDoAr() {
-        return resistenciaDoAr;
+        return 0.3 * velocidade * velocidade;
     }
 }
