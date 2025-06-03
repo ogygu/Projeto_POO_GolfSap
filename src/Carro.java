@@ -48,7 +48,7 @@ public class Carro extends JFrame {
         lblResistenciaAr.setBounds(50, 200, 200, 30);
         add(lblResistenciaAr);
 
-        lblMarcha = new JLabel("Marcha: 1");
+        lblMarcha = new JLabel("Marcha: N");
         lblMarcha.setBounds(50, 250, 200, 30);
         add(lblMarcha);
 
@@ -235,7 +235,7 @@ public class Carro extends JFrame {
         lblRPM.setText("RPM: " + motor.getRPM());
         lblCombustivel.setText("Combustível: " + String.format("%.2f", tanque.getNivelCombustivel()) + "%");
         lblResistenciaAr.setText("Resistência do Ar: " + String.format("%.2f", roda.getResistenciaDoAr()) + " N");
-        lblMarcha.setText("Marcha: " + caixaMarchas.getMarchaAtual());
+        lblMarcha.setText("Marcha: " + caixaMarchas.getMarchaExibicao());
 
         // Alerta de combustível baixo
         if (tanque.getNivelCombustivel() < 10) {
