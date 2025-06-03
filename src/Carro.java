@@ -218,13 +218,12 @@ public class Carro extends JFrame {
         int marcha = caixaMarchas.getMarchaAtual();
         double velocidadeMaximaPorMarcha = caixaMarchas.getVelocidadeMaximaPorMarcha();
 
-        // Corrigido: agora passa os três parâmetros
         roda.atualizarVelocidade(rpm, marcha, velocidadeMaximaPorMarcha);
-        tanque.consumirCombustivel(rpm / 7000 * 0.5); // Consumo proporcional ao RPM
+        tanque.consumirCombustivel(rpm / 7000 * 0.5);
 
-        // Atualiza automaticamente a marcha se for automático
+        // Passamos também o RPM para a troca automática
         if (caixaMarchas.isCambioAutomatico()) {
-            caixaMarchas.atualizarMarchaAutomaticamente(roda.getVelocidade());
+            caixaMarchas.atualizarMarchaAutomaticamente(roda.getVelocidade(), motor.getRPM());
         }
 
         atualizarInterface();

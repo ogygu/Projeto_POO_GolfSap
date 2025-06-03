@@ -1,7 +1,6 @@
 public class CaixaMarchas {
     private int marchaAtual; // 0 = neutro
     private boolean cambioAutomatico;
-    // índice 0 = neutro, índices 1-5 = marchas
     private final double[] limitesMarchas = {0, 30, 60, 100, 160, 240};
 
     public CaixaMarchas() {
@@ -9,7 +8,6 @@ public class CaixaMarchas {
         this.cambioAutomatico = false;
     }
 
-    // Sobe ou desce a marcha (0 = neutro, 1-5 = marchas)
     public void mudarMarcha(boolean up) {
         if (up && marchaAtual < 5) {
             marchaAtual++;
@@ -18,37 +16,40 @@ public class CaixaMarchas {
         }
     }
 
-    // Retorna true se a marcha atual não for a ideal para a velocidade
     public boolean needsGearChange(double velocidade) {
-        if (marchaAtual == 0 && velocidade == 0) return false; // Neutro parado, ok
-        if (marchaAtual == 0 && velocidade > 0) return true;   // Neutro andando, errado
+        if (marchaAtual == 0 && velocidade == 0) return false;
+        if (marchaAtual == 0 && velocidade > 0) return true;
         int ideal = getMarchaIdeal(velocidade);
         return marchaAtual != ideal && velocidade > 0;
     }
 
-    // Retorna a marcha ideal para a velocidade (0 = neutro, 1-5 = marchas)
     public int getMarchaIdeal(double velocidade) {
-        if (velocidade == 0) return 0; // Parado, neutro
+        if (velocidade == 0) return 0;
         for (int i = 1; i < limitesMarchas.length; i++) {
             if (velocidade <= limitesMarchas[i]) {
                 return i;
             }
         }
-        return 5; // Acima do limite, manter na 5ª
+        return 5;
     }
 
-    // Retorna a velocidade máxima permitida para a marcha atual
     public double getVelocidadeMaximaPorMarcha() {
-        if (marchaAtual == 0) return 0; // Neutro não anda
+        if (marchaAtual == 0) return 0;
         return limitesMarchas[marchaAtual];
     }
 
-    // Atualiza a marcha automaticamente se o câmbio estiver no modo automático
-    public void atualizarMarchaAutomaticamente(double velocidade) {
+    // Atualização feita aqui: agora leva em conta o RPM
+    public void atualizarMarchaAutomaticamente(double velocidade, int rpm) {
         if (cambioAutomatico) {
-            int ideal = getMarchaIdeal(velocidade);
-            if (marchaAtual != ideal) {
-                marchaAtual = ideal;
+            if (rpm > 6000 && marchaAtual < 5) {
+                marchaAtual++; // Subir marcha
+            } else if (rpm < 1500 && marchaAtual > 1) {
+                marchaAtual--; // Reduzir marcha
+            } else {
+                int ideal = getMarchaIdeal(velocidade);
+                if (marchaAtual != ideal) {
+                    marchaAtual = ideal;
+                }
             }
         }
     }
@@ -66,9 +67,6 @@ public class CaixaMarchas {
     }
 
     public String getMarchaExibicao() {
-    if (marchaAtual == 0) {
-        return "N"; // Representa Neutro
+        return marchaAtual == 0 ? "N" : String.valueOf(marchaAtual);
     }
-    return String.valueOf(marchaAtual); // Marchas 1-5
-}
 }
