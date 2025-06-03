@@ -64,4 +64,11 @@ public class CaixaMarchas {
     public boolean isCambioAutomatico() {
         return cambioAutomatico;
     }
+
+    public String getMarchaExibicao() {
+    if (marchaAtual == 0) {
+        return "N"; // Representa Neutro
+    }
+    return String.valueOf(marchaAtual); // Marchas 1-5
+}
 }
