@@ -38,7 +38,6 @@ public class CaixaMarchas {
         return limitesMarchas[marchaAtual];
     }
 
-    // Atualização feita aqui: agora leva em conta o RPM
     public void atualizarMarchaAutomaticamente(double velocidade, int rpm) {
         if (cambioAutomatico) {
             if (rpm > 6000 && marchaAtual < 5) {

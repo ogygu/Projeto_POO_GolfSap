@@ -18,6 +18,7 @@ public class Motor {
         if (rpm < 0) rpm = 0;
         torque = rpm / 1000 * 100;
     }
+
     public void parar() {
         rpm = 0;
         torque = 0;
@@ -25,6 +26,11 @@ public class Motor {
 
     public int getRPM() {
         return rpm;
+    }
+
+    public void setRPM(int rpm) {
+        this.rpm = Math.max(0, Math.min(rpm, 7000));
+        this.torque = this.rpm / 1000 * 100;
     }
 
     public double getTorque() {

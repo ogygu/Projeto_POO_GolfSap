@@ -1,5 +1,7 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.*;
 
 public class Carro extends JFrame {
@@ -13,25 +15,26 @@ public class Carro extends JFrame {
     private boolean avisado = false;
 
     private JLabel lblVelocimetro, lblRPM, lblCombustivel, lblResistenciaAr, lblMarcha;
-    private JButton btnAcelerar, btnFrear, btnMarchaMais, btnMarchaMenos, btnLigarDesligar, btnAbastecer;
+    private JButton btnMarchaMais, btnMarchaMenos, btnLigarDesligar, btnAbastecer, btnAcelerador;
+
+    private Timer timerAceleracao;
+    private Timer timerDesaceleracao;
+    private double velocidadeAlvo = 0;
 
     public Carro() {
-        // Inicialização das classes
         motor = new Motor();
         caixaMarchas = new CaixaMarchas();
         tanque = new Tanque(100); // Nível inicial de combustível
         roda = new Roda();
 
-        // Configura o câmbio automático como desativado por padrão
         caixaMarchas.setCambioAutomatico(false);
 
-        // Configuração da janela
         setTitle("Simulador de Carro");
         setSize(600, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(null);
 
-        // Componentes da interface
+        // Labels
         lblVelocimetro = new JLabel("Velocidade: 0 km/h");
         lblVelocimetro.setBounds(50, 50, 200, 30);
         add(lblVelocimetro);
@@ -52,112 +55,109 @@ public class Carro extends JFrame {
         lblMarcha.setBounds(50, 250, 200, 30);
         add(lblMarcha);
 
-        // Botão de Ligar/Desligar
+        // Botões
         btnLigarDesligar = new JButton("Ligar");
         btnLigarDesligar.setBounds(300, 250, 100, 30);
-        btnLigarDesligar.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                ligado = !ligado;
-                btnLigarDesligar.setText(ligado ? "Desligar" : "Ligar");
-
-                // Ativa/desativa outros botões
-                btnAcelerar.setEnabled(ligado);
-                btnFrear.setEnabled(ligado);
-                btnMarchaMais.setEnabled(ligado);
-                btnMarchaMenos.setEnabled(ligado);
-                btnAbastecer.setEnabled(ligado);
-
-                if (!ligado) {
-                    motor.parar();
-                }
-
-                atualizarInterface();
-            }
-        });
+        btnLigarDesligar.addActionListener(this::toggleLigado);
         add(btnLigarDesligar);
 
-        // Botão de Câmbio Automático
         JButton btnCambioAutomatico = new JButton("Ativar Auto");
         btnCambioAutomatico.setBounds(300, 350, 120, 30);
-        btnCambioAutomatico.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                boolean isAuto = caixaMarchas.isCambioAutomatico();
-                caixaMarchas.setCambioAutomatico(!isAuto);
-
-                btnCambioAutomatico.setText(caixaMarchas.isCambioAutomatico() ? "Desativar Auto" : "Ativar Auto");
-
-                btnMarchaMais.setEnabled(!caixaMarchas.isCambioAutomatico());
-                btnMarchaMenos.setEnabled(!caixaMarchas.isCambioAutomatico());
-
-                atualizarInterface();
-            }
-        });
+        btnCambioAutomatico.addActionListener(this::toggleCambio);
         add(btnCambioAutomatico);
 
-        // Botão de Abastecer
         btnAbastecer = new JButton("Abastecer");
         btnAbastecer.setBounds(300, 300, 100, 30);
         btnAbastecer.setEnabled(false);
-        btnAbastecer.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (ligado) {
-                    tanque.abastecer();
-                    JOptionPane.showMessageDialog(
-                        Carro.this,
-                        "O carro foi abastecido! Combustível restaurado para 100%",
-                        "Sucesso",
-                        JOptionPane.INFORMATION_MESSAGE
-                    );
-                    atualizarInterface();
-                }
-            }
-        });
+        btnAbastecer.addActionListener(this::abastecer);
         add(btnAbastecer);
 
-        // Botões de ação (inicialmente desativados)
-        btnAcelerar = new JButton("Acelerar");
-        btnAcelerar.setBounds(300, 50, 100, 30);
-        btnAcelerar.setEnabled(false);
-        btnAcelerar.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (ligado) {
-                    motor.acelerar();
-                    atualizarDinamica();
+        // Botão de Acelerador Segurável
+        btnAcelerador = new JButton("Segure para acelerar");
+        btnAcelerador.setBounds(300, 50, 200, 40);
+        btnAcelerador.setEnabled(false);
+        add(btnAcelerador);
+
+        // Timer para aceleração gradual
+        timerAceleracao = new Timer(100, (e) -> {
+            double velocidadeAtual = roda.getVelocidade();
+            if (velocidadeAtual < velocidadeAlvo && ligado && tanque.getNivelCombustivel() > 0) {
+                double diferenca = velocidadeAlvo - velocidadeAtual;
+                double passo = Math.min(diferenca, 2); // Acelera 2 km/h por ciclo
+
+                velocidadeAtual += passo;
+
+                // Simula aumento de RPM proporcional
+                int rpm = motor.getRPM();
+                motor.setRPM((int)(rpm + (passo / caixaMarchas.getVelocidadeMaximaPorMarcha()) * 700));
+
+                roda.setVelocidade(velocidadeAtual);
+                atualizarInterface();
+            }
+
+            if (velocidadeAtual >= velocidadeAlvo || !ligado || tanque.getNivelCombustivel() <= 0) {
+                ((Timer)e.getSource()).stop();
+            }
+        });
+
+        // Timer para desaceleração automática
+        timerDesaceleracao = new Timer(100, (e) -> {
+            double velocidadeAtual = roda.getVelocidade();
+            if (velocidadeAtual > velocidadeAlvo) {
+                double diferenca = velocidadeAtual - velocidadeAlvo;
+                double passo = Math.min(diferenca, 2); // Reduz 2 km/h por ciclo
+                velocidadeAtual -= passo;
+
+                // Simula queda de RPM proporcional
+                int rpm = motor.getRPM();
+                motor.setRPM((int)(rpm - (passo / caixaMarchas.getVelocidadeMaximaPorMarcha()) * 700));
+
+                roda.setVelocidade(velocidadeAtual);
+                atualizarInterface();
+
+                if (velocidadeAtual <= velocidadeAlvo) {
+                    ((Timer)e.getSource()).stop();
+                }
+            } else {
+                ((Timer)e.getSource()).stop();
+            }
+        });
+
+        // Eventos do botão do acelerador
+        btnAcelerador.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent evt) {
+                if (ligado && tanque.getNivelCombustivel() > 0) {
+                    velocidadeAlvo = caixaMarchas.getVelocidadeMaximaPorMarcha(); // Máx da marcha atual
+                    if (!timerAceleracao.isRunning()) {
+                        timerAceleracao.start();
+                    }
+                    if (timerDesaceleracao.isRunning()) {
+                        timerDesaceleracao.stop();
+                    }
+                }
+            }
+
+            public void mouseReleased(MouseEvent evt) {
+                timerAceleracao.stop();
+
+                velocidadeAlvo = Math.max(0, roda.getVelocidade() * 0.6); // 60% da velocidade atual
+
+                if (!timerDesaceleracao.isRunning()) {
+                    timerDesaceleracao.start();
                 }
             }
         });
-        add(btnAcelerar);
 
-        btnFrear = new JButton("Frear");
-        btnFrear.setBounds(300, 100, 100, 30);
-        btnFrear.setEnabled(false);
-        btnFrear.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (ligado) {
-                    motor.freiar();
-                    atualizarDinamica();
-                }
-            }
-        });
-        add(btnFrear);
-
+        // Botões de Marcha
         btnMarchaMais = new JButton("Marcha +");
         btnMarchaMais.setBounds(300, 150, 100, 30);
         btnMarchaMais.setEnabled(false);
-        btnMarchaMais.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (ligado) {
-                    caixaMarchas.mudarMarcha(true);
-                    contadorAviso = 0;
-                    avisado = false;
-                    atualizarInterface();
-                }
+        btnMarchaMais.addActionListener(e -> {
+            if (ligado) {
+                caixaMarchas.mudarMarcha(true);
+                contadorAviso = 0;
+                avisado = false;
+                atualizarInterface();
             }
         });
         add(btnMarchaMais);
@@ -165,52 +165,77 @@ public class Carro extends JFrame {
         btnMarchaMenos = new JButton("Marcha -");
         btnMarchaMenos.setBounds(300, 200, 100, 30);
         btnMarchaMenos.setEnabled(false);
-        btnMarchaMenos.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (ligado) {
-                    caixaMarchas.mudarMarcha(false);
-                    contadorAviso = 0;
-                    avisado = false;
-                    atualizarInterface();
-                }
+        btnMarchaMenos.addActionListener(e -> {
+            if (ligado) {
+                caixaMarchas.mudarMarcha(false);
+                contadorAviso = 0;
+                avisado = false;
+                atualizarInterface();
             }
         });
         add(btnMarchaMenos);
 
         setVisible(true);
-        // Timer para verificar periodicamente se precisa trocar de marcha
-        Timer timerVerificarMarcha = new Timer(1000, (e) -> {
+
+        // Verificação periódica de marcha
+        Timer timerVerificarMarcha = new Timer(1000, e -> {
             if (!caixaMarchas.isCambioAutomatico() && ligado) {
                 double velocidade = roda.getVelocidade();
-
                 if (caixaMarchas.needsGearChange(velocidade)) {
                     contadorAviso++;
-
                     if (contadorAviso == 3 && !avisado) {
-                        JOptionPane.showMessageDialog(this,
+                        JOptionPane.showMessageDialog(Carro.this,
                                 "Você deveria trocar de marcha.",
                                 "Dica",
                                 JOptionPane.INFORMATION_MESSAGE);
                         avisado = true;
-
                     } else if (contadorAviso >= 6 && avisado) {
-                        JOptionPane.showMessageDialog(this,
+                        JOptionPane.showMessageDialog(Carro.this,
                                 "ATENÇÃO: Troque de marcha imediatamente!",
                                 "Alerta",
                                 JOptionPane.WARNING_MESSAGE);
                         contadorAviso = 0;
                         avisado = false;
                     }
-
                 } else {
-                    // Resetar avisos se a marcha estiver correta
                     contadorAviso = 0;
                     avisado = false;
                 }
             }
         });
         timerVerificarMarcha.start();
+    }
+
+    private void toggleLigado(ActionEvent e) {
+        ligado = !ligado;
+        btnLigarDesligar.setText(ligado ? "Desligar" : "Ligar");
+
+        btnAcelerador.setEnabled(ligado);
+        btnMarchaMais.setEnabled(ligado);
+        btnMarchaMenos.setEnabled(ligado);
+        btnAbastecer.setEnabled(ligado);
+
+        if (!ligado) motor.parar();
+        atualizarInterface();
+    }
+
+    private void toggleCambio(ActionEvent e) {
+        boolean isAuto = caixaMarchas.isCambioAutomatico();
+        caixaMarchas.setCambioAutomatico(!isAuto);
+        btnMarchaMais.setEnabled(!caixaMarchas.isCambioAutomatico());
+        btnMarchaMenos.setEnabled(!caixaMarchas.isCambioAutomatico());
+        atualizarInterface();
+    }
+
+    private void abastecer(ActionEvent e) {
+        if (ligado) {
+            tanque.abastecer();
+            JOptionPane.showMessageDialog(this,
+                    "O carro foi abastecido! Combustível restaurado para 100%",
+                    "Sucesso",
+                    JOptionPane.INFORMATION_MESSAGE);
+            atualizarInterface();
+        }
     }
 
     private void atualizarDinamica() {
@@ -221,7 +246,6 @@ public class Carro extends JFrame {
         roda.atualizarVelocidade(rpm, marcha, velocidadeMaximaPorMarcha);
         tanque.consumirCombustivel(rpm / 7000 * 0.5);
 
-        // Passamos também o RPM para a troca automática
         if (caixaMarchas.isCambioAutomatico()) {
             caixaMarchas.atualizarMarchaAutomaticamente(roda.getVelocidade(), motor.getRPM());
         }
@@ -236,7 +260,6 @@ public class Carro extends JFrame {
         lblResistenciaAr.setText("Resistência do Ar: " + String.format("%.2f", roda.getResistenciaDoAr()) + " N");
         lblMarcha.setText("Marcha: " + caixaMarchas.getMarchaExibicao());
 
-        // Alerta de combustível baixo
         if (tanque.getNivelCombustivel() < 10) {
             JOptionPane.showMessageDialog(this, "Combustível muito baixo! Abasteça o carro.", "Alerta", JOptionPane.WARNING_MESSAGE);
         }

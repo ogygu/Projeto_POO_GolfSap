@@ -5,13 +5,11 @@ public class Tanque {
         this.nivelCombustivel = nivelInicial;
     }
 
-    // Método para consumir combustível com base no consumo fornecido
     public void consumirCombustivel(double consumo) {
         nivelCombustivel -= consumo;
         if (nivelCombustivel < 0) nivelCombustivel = 0;
     }
 
-    // Método para abastecer o tanque até 100%
     public void abastecer() {
         nivelCombustivel = 100; // Recarrega o tanque para 100%
     }
@@ -19,4 +17,4 @@ public class Tanque {
     public double getNivelCombustivel() {
         return nivelCombustivel;
     }
-}
+}   
