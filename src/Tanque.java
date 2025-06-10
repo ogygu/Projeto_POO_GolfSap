@@ -1,20 +1,27 @@
-public class Tanque {
-    private double nivelCombustivel;
-
-    public Tanque(double nivelInicial) {
-        this.nivelCombustivel = nivelInicial;
+// Classe Tanque
+class Tanque {
+    private double combustivel; // Percentual de 0 a 100
+    private static final double CAPACIDADE = 50; // Litros
+    
+    public Tanque() {
+        this.combustivel = 100; // Tanque cheio
     }
-
-    public void consumirCombustivel(double consumo) {
-        nivelCombustivel -= consumo;
-        if (nivelCombustivel < 0) nivelCombustivel = 0;
+    
+    public void consumir(double quantidade) {
+        combustivel = Math.max(0, combustivel - quantidade);
     }
-
+    
     public void abastecer() {
-        nivelCombustivel = 100; // Recarrega o tanque para 100%
+        combustivel = 100;
     }
-
-    public double getNivelCombustivel() {
-        return nivelCombustivel;
+    
+    public boolean isTanqueVazio() {
+        return combustivel <= 0;
     }
-}   
+    
+    public boolean isModoReserva() {
+        return combustivel <= 15 && combustivel > 0;
+    }
+    
+    public double getCombustivel() { return combustivel; }
+}
